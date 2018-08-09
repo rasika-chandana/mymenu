@@ -19,11 +19,22 @@ U8GLIB_ST7920_128X64_1X u8g(23, 17, 16);
 #define BUZZER_DIO 37
 
 
-#define MENU_ITEMS 2
-const char *menu_strings[MENU_ITEMS] = { "Number of Plates : ", "Destination Tower: "};
-const char *menu_values[MENU_ITEMS] = { "6", "B"};
+#define MAIN_MENU_ITEMS 2
+#define PLATE_MENU_ITEMS 6
+#define TOWER_MENU_ITEMS 2
+const char *mainMenuItems[MAIN_MENU_ITEMS] = { "Number of Plates : ", "Destination Tower: "};
+char *mainMenuValues[MAIN_MENU_ITEMS] = { "6", "B"};
 
-uint8_t menu_current = 0;
+const char *plateMenuItems[PLATE_MENU_ITEMS] = { "Number of plates"};
+const char *plateMenuValues[PLATE_MENU_ITEMS] = { "1", "2", "3", "4", "5", "6"};
+
+const char *towerMenuItems[TOWER_MENU_ITEMS] = { "Destination Tower"};
+const char *towerMenuValues[TOWER_MENU_ITEMS] = { "B", "C"};
+
+uint8_t currentNumberOfMenuItems = MAIN_MENU_ITEMS;
+uint8_t currentMenuItem = 0;
+uint8_t currentPageNumber = 1;
+
 uint8_t menu_redraw_required = 1;
 
 volatile int myInterruptVar = 0;
@@ -82,15 +93,71 @@ void setup()
 }
 
 void drawCurrentPage(void) {
-  drawFirstPage();
+  if (1 == currentPageNumber) {
+    drawFirstPage();
+  } else if (2 == currentPageNumber) {
+    drawNumberOfPlatesPage();
+  } else if (3 == currentPageNumber) {
+    drawDestinationTowerPage();
+  }
+
 }
 
 void drawNumberOfPlatesPage(void) {
+  uint8_t i, h;
+  u8g_uint_t w, d, hieght;
+
+  u8g.setFont(u8g_font_6x12);
+  u8g.setFontRefHeightText();
+  u8g.setFontPosTop();
+  u8g.setDefaultForegroundColor();
   
+  h = u8g.getFontAscent() - u8g.getFontDescent();
+  w = u8g.getWidth();
+  //hieght = u8g.getHeight();
+  d = 5;
+
+  d = (w - u8g.getStrWidth(plateMenuItems[0])) / 2;
+  u8g.drawStr(d, 2, plateMenuItems[0]);
+
+  u8g.setFont(u8g_font_osb35);
+  u8g.setFontRefHeightText();
+  u8g.setFontPosTop();
+
+  w = u8g.getWidth();
+  //hieght = u8g.getHeight();
+
+  d = (w - u8g.getStrWidth(plateMenuValues[currentMenuItem])) / 2;
+  u8g.drawStr(d, (h + 10), plateMenuValues[currentMenuItem]);
+  //Serial.print("H >> "); Serial.println(h); Serial.print("W >> "); Serial.println(w); Serial.print("hieght >> "); Serial.println(hieght);
 }
 
 void drawDestinationTowerPage(void) {
-  
+  uint8_t i, h;
+  u8g_uint_t w, d, hieght;
+
+  u8g.setFont(u8g_font_6x12);
+  u8g.setFontRefHeightText();
+  u8g.setFontPosTop();
+  u8g.setDefaultForegroundColor();
+
+  h = u8g.getFontAscent() - u8g.getFontDescent();
+  w = u8g.getWidth();
+  //hieght = u8g.getHeight();
+
+  d = (w - u8g.getStrWidth(towerMenuItems[0])) / 2;
+  u8g.drawStr(d, 2, towerMenuItems[0]);
+
+  u8g.setFont(u8g_font_osb35);
+  u8g.setFontRefHeightText();
+  u8g.setFontPosTop();
+
+  w = u8g.getWidth();
+  //hieght = u8g.getHeight();
+
+  d = (w - u8g.getStrWidth(towerMenuValues[currentMenuItem])) / 2;
+  u8g.drawStr(d, (h + 10), towerMenuValues[currentMenuItem]);
+  //Serial.print("H >> "); Serial.println(h); Serial.print("W >> "); Serial.println(w); Serial.print("hieght >> "); Serial.println(hieght);
 }
 
 void drawFirstPage(void) {
@@ -107,16 +174,16 @@ void drawFirstPage(void) {
 
   Serial.print("H >> "); Serial.println(h); Serial.print("W >> "); Serial.println(w); Serial.print("hieght >> "); Serial.println(hieght);
 
-  for ( i = 0; i < MENU_ITEMS; i++ ) {
-    //d = (w - u8g.getStrWidth(menu_strings[i])) / 2;
+  for ( i = 0; i < MAIN_MENU_ITEMS; i++ ) {
+    //d = (w - u8g.getStrWidth(mainMenuItems[i])) / 2;
     d = 1;
     u8g.setDefaultForegroundColor();
-    if ( i == menu_current ) {
+    if ( i == currentMenuItem ) {
       u8g.drawBox(0, i * h + 2, w, h);
       u8g.setDefaultBackgroundColor();
     }
-    u8g.drawStr(d, i * h + 2, menu_strings[i]);
-    u8g.drawStr(w - 15, i * h + 2, menu_values[i]);
+    u8g.drawStr(d, i * h + 2, mainMenuItems[i]);
+    u8g.drawStr(w - 15, i * h + 2, mainMenuValues[i]);
   }
 
   //  char temp[10];
@@ -128,10 +195,39 @@ void drawFirstPage(void) {
 
 void handleRotaryButton(void) {
   Serial.println("Rotary Button pressed >>>> ");
+  if (1 == currentPageNumber) {
+    if (0 == currentMenuItem) {
+      currentPageNumber = 2;
+      currentNumberOfMenuItems = PLATE_MENU_ITEMS;
+      currentMenuItem = 0;
+    } else if (1 == currentMenuItem) {
+      currentPageNumber = 3;
+      currentNumberOfMenuItems = TOWER_MENU_ITEMS;
+      currentMenuItem = 0;
+    }
+  } else if (2 == currentPageNumber) {
+    mainMenuValues[0] = plateMenuValues[currentMenuItem];
+    currentPageNumber = 1;
+    currentNumberOfMenuItems = MAIN_MENU_ITEMS;
+    currentMenuItem = 0;
+  } else if (3 == currentPageNumber) {
+    mainMenuValues[1] = towerMenuValues[currentMenuItem];
+    currentPageNumber = 1;
+    currentNumberOfMenuItems = MAIN_MENU_ITEMS;
+    currentMenuItem = 1;
+  } else {
+    mainMenuValues[0] = "3";
+    mainMenuValues[1] = "B";
+    currentPageNumber = 1;
+    currentNumberOfMenuItems = MAIN_MENU_ITEMS;
+    currentMenuItem = 0;
+  }
+  menu_redraw_required = 1;
 }
 
 void handleResetButton(void) {
   Serial.println("Reset Button pressed >>>> ");
+  menu_redraw_required = 1;
 }
 
 
@@ -165,7 +261,7 @@ void drawDisplay(void) {
   if (DialCount != PreDialCount) {
     //Serial.println("DialCount >>>> "); Serial.print(DialCount);
     PreDialCount = DialCount;
-    menu_current = DialCount % MENU_ITEMS;
+    currentMenuItem = DialCount % currentNumberOfMenuItems;
     menu_redraw_required = 1;
   }
   //Serial.print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"); Serial.println(myInterruptVar);
